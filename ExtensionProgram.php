@@ -7,6 +7,50 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 
 
 <?php
+session_start();
+if($_SERVER['REQUEST_METHOD'] != 'POST')
+{
+    $_SESSION["tabColCount"] = 0;
+    $_SESSION["fieldName"] = [];
+    $_SESSION["fieldType"] = [];
+    $_SESSION["tableName"] = "tbl_extension_program";
+    getTableDetails($_SESSION["tableName"]);
+}
+
+if(isset($_POST['selectTable']))
+{
+    // getTableDetails($_POST['optTables']);
+    // getTableDetails('tbl_extension_program');
+    
+    $_SESSION["tableName"] = $_POST['optTables'];
+    echo 'select Table',$_SESSION["tableName"];
+    getTableDetails($_SESSION["tableName"]);
+
+}
+
+function getTableDetails($tbl_name) {
+
+    $conn=mysqli_connect("localhost","root","","db_au_mis");
+    $que = "desc " . $tbl_name;
+    echo $que;
+    $result = mysqli_query($conn,$que);
+    $rows   = mysqli_num_rows($result);
+    
+    
+    $i = 0; //tmpIndexValue
+    $_SESSION["fieldName"] = [];
+    $_SESSION["fieldType"] = [];
+    while($row=mysqli_fetch_array($result)){
+        
+        $_SESSION["fieldName"][] = $row['Field'];
+        $_SESSION["fieldType"][] = explode("(",$row['Type'])[0];
+
+        echo "field : " , $_SESSION["fieldName"][$i] , "type : " , $_SESSION["fieldType"][$i];
+        $i++;
+    }
+    $_SESSION["tabColCount"] = $i; 
+}
+
 $updateFlag=false;
 if(isset($_POST['btnUpdate'])){
 	
@@ -46,21 +90,44 @@ if(isset($_POST['btnDelete'])){
 }
 if(isset($_POST['submit']))
 {
-	$conn=mysqli_connect("localhost","root","","db_au_mis");
-	if($conn)
-	{
-		$txtActivityName=$_POST['txtActivityName'];
-		$txtWithAgency=$_POST['txtWithAgency'];
-		$txtNoOfParticipant=$_POST['txtNoOfParticipant'];
-		//$optCurrentYear=$_POST['optCurrentYear'];
-		$optCurrentYear=2015;
-		$docUrl="abc/abc";
 
-		$fDate = date('Y-m-d',strtotime($_POST['txtFromDate']));
-		$tDate = date('Y-m-d',strtotime($_POST['txtToDate']));
-		
-		$q="insert into tbl_extension_program values('".$txtActivityName."','".$txtWithAgency."','".$fDate."','".$tDate."',".$txtNoOfParticipant.",'".$optCurrentYear."','".$docUrl."')";
-		$res=mysqli_query($conn,$q);
+    /////////////logic to create insert query/////////////////////////////
+    $conn=mysqli_connect("localhost","root","","db_au_mis");
+    $result = mysqli_query($conn,"desc ".$_SESSION["tableName"]);
+    var_dump($result);
+    $filedNameString ="";
+    $fieldValueString = "";
+    $myQyery = "insert into ".$_SESSION["tableName"]."(";
+    
+    while($row=mysqli_fetch_array($result)){
+        // echo "<br>".$row['Field']." ".$row['Type']."<br>";
+        $filedNameString .= $row['Field'].",";
+        $fieldDataType = explode("(",$row['Type'])[0];
+        
+        // switch($fieldDataType){
+        //     case "varchar":
+        //         $fieldValueString .= "'".$_POST[$row['Field']]."',";        
+        //         break;
+        //     case "date":
+        //         $tempDate = date('Y-m-d',strtotime($_POST[$row['Field']]));
+        //         $fieldValueString .= "'".$tempDate."',";
+        //         break;
+        //     case "int":
+        //         echo "<br>came into int wala<br>";
+        //         $fieldValueString .= "".$_POST[$row['Field']].",";
+        //         break;
+        // }
+        $fieldValueString .= "'".$_POST[$row['Field']]."',";
+    }
+    $columnNameQuery =  $myQyery.mb_substr($filedNameString, 0, -1).")";
+    $firingQuery = $columnNameQuery." values(".mb_substr($fieldValueString, 0, -1).");";
+    echo "<br>".$firingQuery."<br>";
+    /////////////logic to create insert query - final query will be in variable $firingQuery/////////////////////////////
+    
+    //////////////////////////////////////////////////////Insertion of custom query///////////////
+    $conn=mysqli_connect("localhost","root","","db_au_mis");
+    if($conn){
+        $res=mysqli_query($conn,$firingQuery);
 		if($res)
 		{
 			echo "inserted";
@@ -68,9 +135,63 @@ if(isset($_POST['submit']))
 		else{
 			echo "Faild";
 		}
+    }
+    //////////////////////////////////////////////////////Insertion of custom query///////////////
+
+    // if($conn)
+	// {
+    //     $query="insert into tbl_extension_program values('".$txtActivityName."','".$txtWithAgency."','".$fDate."','".$tDate."',".$txtNoOfParticipant.",'".$optCurrentYear."','".$docUrl."')";
+    //     for( $i=0; $i<$tabColCount; $i++){
+
+    //     }
+    
+    //     $txtActivityName=$_POST['txtActivityName'];
+	// 	$txtWithAgency=$_POST['txtWithAgency'];
+	// 	$txtNoOfParticipant=$_POST['txtNoOfParticipant'];
+	// 	//$optCurrentYear=$_POST['optCurrentYear'];
+	// 	$optCurrentYear=2015;
+	// 	$docUrl="abc/abc";
+
+	// 	$fDate = date('Y-m-d',strtotime($_POST['txtFromDate']));
+	// 	$tDate = date('Y-m-d',strtotime($_POST['txtToDate']));
 		
-		}
-	}
+	// 	$q="insert into tbl_extension_program values('".$txtActivityName."','".$txtWithAgency."','".$fDate."','".$tDate."',".$txtNoOfParticipant.",'".$optCurrentYear."','".$docUrl."')";
+	// 	$res=mysqli_query($conn,$q);
+	// 	if($res)
+	// 	{
+	// 		echo "inserted";
+	// 	}
+	// 	else{
+	// 		echo "Faild";
+	// 	}
+		
+    // }
+
+	// $conn=mysqli_connect("localhost","root","","db_au_mis");
+	// if($conn)
+	// {
+	// 	$txtActivityName=$_POST['txtActivityName'];
+	// 	$txtWithAgency=$_POST['txtWithAgency'];
+	// 	$txtNoOfParticipant=$_POST['txtNoOfParticipant'];
+	// 	//$optCurrentYear=$_POST['optCurrentYear'];
+	// 	$optCurrentYear=2015;
+	// 	$docUrl="abc/abc";
+
+	// 	$fDate = date('Y-m-d',strtotime($_POST['txtFromDate']));
+	// 	$tDate = date('Y-m-d',strtotime($_POST['txtToDate']));
+		
+	// 	$q="insert into tbl_extension_program values('".$txtActivityName."','".$txtWithAgency."','".$fDate."','".$tDate."',".$txtNoOfParticipant.",'".$optCurrentYear."','".$docUrl."')";
+	// 	$res=mysqli_query($conn,$q);
+	// 	if($res)
+	// 	{
+	// 		echo "inserted";
+	// 	}
+	// 	else{
+	// 		echo "Faild";
+	// 	}
+		
+    // }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -90,6 +211,15 @@ if(isset($_POST['submit']))
             window.scrollTo(0, 1);
         }
     </script>
+
+    <!-- Style to set the size of checkbox -->
+    <style> 
+        input.largerCheckbox { 
+            width: 40px; 
+            height: 40px; 
+        } 
+    </style>
+
     <!-- //Meta Tags -->
 
     <!-- Style-sheets -->
@@ -241,8 +371,9 @@ if(isset($_POST['submit']))
                         </button>
                     </div>
                     <!-- Search-from -->
+                    
                     <form action="#" method="post" class="form-inline mx-auto search-form">
-                        <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search" required="">
+                        <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search" >
                         <button class="btn btn-style my-2 my-sm-0" type="submit">Search</button>
                     </form>
                     <!--// Search-from -->
@@ -367,30 +498,268 @@ if(isset($_POST['submit']))
                 </div>
             </nav>
              <!--// top-bar -->
+
+<!-- ************************************************************************************** -->
+
+        
+
+
 		     <!-- Forms content -->
             <section class="forms-section">
                 <div class="outer-w3-agile mt-3">
                     <h4 class="tittle-w3-agileits mb-4">Extension Program</h4>
                     <form action="<?php echo $_SERVER['PHP_SELF'];?>" method="post">
+
+                <select name="optTables" id="optTables" class="form-control">
+                <?php
+                    $conn=mysqli_connect("localhost","root","","db_au_mis");
+                    $result = mysqli_query($conn,"Show tables");
+                    while($row=mysqli_fetch_array($result)){
+                        // echo $row[0] , "\n";
+                        ?>
+                        <option> <?php echo $row[0] ?> </option>        
+                        <?php      
+                    }
+                ?>       
+                <option selected="true"> <?php echo $_SESSION["tableName"] ?> </option>
+                </select>
+                <input type="submit" class="btn btn-primary" value="Get Table List" name="selectTable">
+
+                <?php
+                
+                   
+                    // $conn=mysqli_connect("localhost","root","","db_au_mis");
+                    // $result = mysqli_query($conn,"desc tbl_course");
+                    // var_dump($result);
+                    // $rows   = mysqli_num_rows($result);
+                    // echo 'fiiiieelldd',$rows;
+                    // while($row=mysqli_fetch_array($result)){
+                    //     echo "field : " , $row['Field'] , "type : " , explode("(",$row['Type'])[0];
+                    // }
+
+                    $tempForLoopConditionVariable = 0;
+                    echo $_SESSION["tabColCount"]; 
+                    if($_SESSION["tabColCount"]%2 == 0){
+                        echo 'even';
+                        
+                        $tempForLoopConditionVariable = $_SESSION["tabColCount"]/2;
+                    }else{
+                        echo 'odd';
+
+                        $tempForLoopConditionVariable = ($_SESSION["tabColCount"]-1)/2;
+                    }    
+
+                    $i=0;
+                    for($j=0; $j < $tempForLoopConditionVariable; $j++){
+                        $i = $j * 2;
+                        // $row=mysqli_fetch_array($result);
+                        // echo "field : " , $row['Field'] , "type : " , $row['Type'];
+
+                ?>
+
+
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label><?php echo $_SESSION["fieldName"][$i] ?></label>
+                                
+                                <?php
+                                switch ($_SESSION["fieldType"][$i]) {
+                                    case "varchar":
+                                        ?>
+                                        
+                                        <input type="text" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['activity_name'] ?>" <?php } ?> />
+                                        
+                                        <?php
+                                        break;
+                                    case "date":
+                                        ?>
+                                        
+                                        <input type="date" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['to_date'] ?>" <?php } ?> />
+                                        
+                                        <?php
+                                        break;
+                                    case "int":
+                                        ?>
+                                        
+                                        <input type="number" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['no_of_participant'] ?>" <?php } ?> />
+                                        
+                                        <?php
+                                        break;
+                                    case "tinyint":
+                                        ?>
+                                        
+                                        <input type="checkbox" class="form-control largerCheckbox" name="<?php echo $_SESSION["fieldName"][$i] ?>" value="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['no_of_participant'] ?>" <?php } ?> />
+                                        
+                                        <?php
+                                        break;    
+                                    case "year":
+                                        ?>
+
+                                        <select name="optCurrentYear" class="form-control">';
+                                            <?php if($updateFlag){ ?> <option selected=""> <?php echo $_SESSION["fieldName"][$i] ?> </option> <?php } ?>
+                                            ?>
+                                            <option selected="">Choose...</option>
+                                            <option>...</option>
+                                        </select>
+
+                                        <?php
+                                        break;
+                                    default:
+                                    ?>
+                                        
+                                    <input type="text" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['activity_name'] ?>" <?php } ?> />
+                                    
+                                <?php
+                                }
+                                $i++;
+                                ?>
+                        </div>
+                           
+                            <div class="form-group col-md-6">
+                                <label><?php echo $_SESSION["fieldName"][$i] ?> </label>
+                                
+                                <?php
+                                switch ($_SESSION["fieldType"][$i]) {
+                                    case "varchar":
+                                        ?>
+                                        
+                                        <input type="text" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['activity_name'] ?>" <?php } ?> />
+                                        
+                                        <?php
+                                        break;
+                                    case "date":
+                                        ?>
+                                        
+                                        <input type="date" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['to_date'] ?>" <?php } ?> />
+                                        
+                                        <?php
+                                        break;
+                                    case "int":
+                                        ?>
+                                        
+                                        <input type="number" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['no_of_participant'] ?>" <?php } ?> />
+                                        
+                                        <?php
+                                        break;
+                                    case "tinyint":
+                                        ?>
+                                        
+                                        <input type="checkbox" class="form-control largerCheckbox" name="<?php echo $_SESSION["fieldName"][$i] ?>" value="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['no_of_participant'] ?>" <?php } ?> />
+                                        
+                                        <?php
+                                        break;    
+                                    case "year":
+                                        ?>
+
+                                        <select name="optCurrentYear" class="form-control">';
+                                            <?php if($updateFlag){ ?> <option selected=""> <?php echo $_SESSION["fieldName"][$i] ?> </option> <?php } ?>
+                                            ?>
+                                            <option selected="">Choose...</option>
+                                            <option>...</option>
+                                        </select>
+
+                                        <?php
+                                        break;
+                                    default:
+                                    ?>
+                                        
+                                    <input type="text" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['activity_name'] ?>" <?php } ?> />
+                                    
+                                <?php
+                                }
+                                ?>
+                                
+                                
+                            </div>
+                        </div>
+
+                    <?php }
+                    
+                    if($_SESSION["tabColCount"]%2 != 0){
+                        $i++;
+                    ?>
+
+                        <div class="form-group">
+                                
+                                <label><?php echo $_SESSION["fieldName"][$i] ?> </label>
+                                
+                                <?php
+                                switch ($_SESSION["fieldType"][$i]) {
+                                    case "varchar":
+                                        ?>
+                                        
+                                        <input type="text" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['activity_name'] ?>" <?php } ?> />
+                                        
+                                        <?php
+                                        break;
+                                    case "date":
+                                        ?>
+                                        
+                                        <input type="date" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['to_date'] ?>" <?php } ?> />
+                                        
+                                        <?php
+                                        break;
+                                    case "int":
+                                        ?>
+                                        
+                                        <input type="number" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['no_of_participant'] ?>" <?php } ?> />
+                                        
+                                        <?php
+                                        break;
+                                    case "tinyint":
+                                        ?>
+                                        
+                                        <input type="checkbox" class="form-control largerCheckbox" name="<?php echo $_SESSION["fieldName"][$i] ?>" value="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['no_of_participant'] ?>" <?php } ?> />
+                                        
+                                        <?php
+                                        break;    
+                                    case "year":
+                                        ?>
+
+                                        <select name="optCurrentYear" class="form-control">';
+                                            <?php if($updateFlag){ ?> <option selected=""> <?php echo $_SESSION["fieldName"][$i] ?> </option> <?php } ?>
+                                            ?>
+                                            <option selected="">Choose...</option>
+                                            <option>...</option>
+                                        </select>
+
+                                        <?php
+                                        break;
+                                    default:
+                                    ?>
+                                        
+                                    <input type="text" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['activity_name'] ?>" <?php } ?> />
+                                    
+                                <?php
+                                }
+                                ?>
+                        </div>
+                    
+                    <?php    
+                    }
+                    
+                    ?>
+
+                <!--
                         <div class="form-group">
                             <label>Activity name</label>
-                            <input type="text" class="form-control" name="txtActivityName" placeholder="Activity Name" required="" <?php if($updateFlag){?> value=<?php echo $row['activity_name'] ?> <?php } ?> >
+                            <input type="text" class="form-control" name="txtActivityName" placeholder="Activity Name"  <?php if($updateFlag){?> value=<?php echo $row['activity_name'] ?> <?php } ?> >
                         </div>
                         
                         <div class="form-group">
                             <label>With Agency</label>
-                            <input type="text" class="form-control" name="txtWithAgency" placeholder="With Agency" required="" <?php if($updateFlag){?> value=<?php echo $row['with_agency'] ?> <?php } ?>>
+                            <input type="text" class="form-control" name="txtWithAgency" placeholder="With Agency"  <?php if($updateFlag){?> value=<?php echo $row['with_agency'] ?> <?php } ?>>
                         </div>
 
                         <div class="form-row">
                             <div class="form-group col-md-6">
                                 <label>No of Participant</label>
-                                <input type="number" class="form-control" name="txtNoOfParticipant" placeholder="no of participant" required="" <?php if($updateFlag){?> value=<?php echo $row['no_of_participant'] ?> <?php } ?>>
+                                <input type="number" class="form-control" name="txtNoOfParticipant" placeholder="no of participant"  <?php if($updateFlag){?> value=<?php echo $row['no_of_participant'] ?> <?php } ?>>
                             </div>
                             <div class="form-group col-md-6">
                                 <label>Current year</label>
                                 <select name="optCurrentYear" class="form-control">
-                                    <?php if($updateFlag){?> <option selected=""> <?php echo $row['current_year'] ?> </option> <?php } ?>
+                                    <?php //if($updateFlag){?> <option selected=""> <?php //echo $row['current_year'] ?> </option> <?php //} ?>
                                     <option selected="">Choose...</option>
                                     <option>...</option>
                                 </select>
@@ -407,6 +776,8 @@ if(isset($_POST['submit']))
                                 <input type="date" class="form-control" name="txtToDate" placeholder="To date" <?php if($updateFlag){?> value=<?php echo $row['to_date'] ?> <?php } ?>>  
                             </div>
                         </div>
+                -->
+                        
                         <div class="form-group">
                             <label>Upload Document</label>
                             <button type="submit" class="btn btn-primary">Browse</button>                            
@@ -414,12 +785,52 @@ if(isset($_POST['submit']))
 
                         <input type="submit" class="btn btn-primary" value="submit" name="submit">
                     </form>
-                    <?php 
+
+<!-- ****************************************************************************************** -->
+
+                        
+                        <?php 
+                            //list of tables
+                            // $conn=mysqli_connect("localhost","root","","db_au_mis");
+                            // $result = mysqli_query($conn,"Show tables");
+                            // while($row=mysqli_fetch_array($result)){
+                            //     echo $row[0] , "\n";
+                            // }
+
+                            // $conn=mysqli_connect("localhost","root","","db_au_mis");
+                            // $result = mysqli_query($conn,"SELECT * FROM tbl_extension_program");
+                            // $fields = mysqli_num_fields($result);
+                            // $rows   = mysqli_num_rows($result);
+                            // //$table  = mysql_field_table($result,0);
+                            // $table = 'tbl_extension_program';
+                            // echo "Your '" . $table . "' table has " . $fields . " fields and " . $rows . " record(s)\n";
+                            // echo "The table has the following fields:\n";
+                            // for ($i=0; $i < $fields; $i++) {
+                            //     $type  = mysqli_fetch_field_direct($result, $i);
+                            //     // $name  = mysqli_field_name($result, $i);
+                            //     // $len   = mysqli_field_len($result, $i);
+                            //     // $flags = mysqli_field_flags($result, $i);
+                            //     echo $type->name . " " . $type->max_length; //. " " . $type->table;
+                            // }
+                            // mysqli_free_result($result);
+                            // // mysqli_close();
+
+                            // $result = mysqli_query($conn,"desc tbl_extension_program");
+                            // // var_dump($result);
+                            // $rows   = mysqli_num_rows($result);
+                            // echo 'fiiiieelldd',$rows;
+                            // while($row=mysqli_fetch_array($result)){
+                            //     echo "field : " , $fieldName[$i] , "type : " , $row['Type'];
+                            // }
+                            
+
+
                     	$conn=mysqli_connect("localhost","root","","db_au_mis");
 						if($conn){
-							$query="select * from tbl_extension_program";
+							$query="select * from ".$_SESSION["tableName"];
 							$execute=mysqli_query($conn,$query);
-							
+                            
+                            
 							if(mysqli_num_rows($execute) > 0){
 								echo "<table border=2 class=table table-bordered table-striped >";
 								echo '<thead>

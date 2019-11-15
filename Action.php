@@ -13,10 +13,27 @@ if($_SERVER['REQUEST_METHOD'] != 'POST')
     $_SESSION["tabColCount"] = 0;
     $_SESSION["fieldName"] = [];
     $_SESSION["fieldType"] = [];
-    $_SESSION["tableName"] = "tbl_extension_program";
+    $_SESSION["updateRow"] = [];
+    $_SESSION["key"] = "";
+    $_SESSION["tableName"] = "tbl_au_chair_speakers";
+    $_SESSION["updateFlag"] = false;
     getTableDetails($_SESSION["tableName"]);
+
+   
 }
 
+function getPrimaryKeys($tablename)
+{
+    $_SESSION["keyList"]= [];
+    $conn=mysqli_connect("localhost","root","","db_au_mis");
+    $que = "SHOW KEYS FROM ".$tableName." WHERE Key_name = 'PRIMARY'";
+    echo "<br>".$que;
+    $result = mysqli_query($conn,$que);
+    while($row=mysqli_fetch_array($result)){
+        $_SESSION["keyList"][]=$row['Column_name'];
+    }
+    
+}
 if(isset($_POST['selectTable']))
 {
     // getTableDetails($_POST['optTables']);
@@ -51,17 +68,28 @@ function getTableDetails($tbl_name) {
     $_SESSION["tabColCount"] = $i; 
 }
 
-$updateFlag=false;
+
+
 if(isset($_POST['btnUpdate'])){
-	
-	$proKey=$_POST['program_key'];
-	$c=mysqli_connect("localhost","root","","db_au_mis");
+    
+    $_SESSION['updateFlag'] = true;
+
+    //to get primary key list
+    getPrimaryKeys($_SESSION['tableName']);
+    $proKey=$_POST['key'];
+    $_SESSION["key"]=$_POST['key'];
+    $c=mysqli_connect("localhost","root","","db_au_mis");
 	if($c){
-		$q1="select * from tbl_extension_program where activity_name='".$proKey."'";
+		$q1="select * from ".$_SESSION['tableName']." where ".$_SESSION['fieldName'][0]."='".$proKey."'";
 		$res=mysqli_query($c,$q1);
 		if(mysqli_num_rows($res) > 0 && $row = mysqli_fetch_array($res))
 		{
-			$updateFlag=true;		
+            for($i=0;$i<$_SESSION['tabColCount'];$i++){
+                $_SESSION["updateRow"][] = $row[$i]; 
+
+                echo '*'.$_SESSION["updateRow"][$i];
+            }
+            
 			// $row['activity_name']
 			// $row['with_agency']
 			// $row['from_date']
@@ -74,11 +102,11 @@ if(isset($_POST['btnUpdate'])){
 
 }
 if(isset($_POST['btnDelete'])){
-	$proKey=$_POST['program_key'];
+	$proKey=$_POST['key'];
 	$c=mysqli_connect("localhost","root","","db_au_mis");
 	if($c){
-		$q1="delete from tbl_extension_program where activity_name='".$proKey."'";
-		$res=mysqli_query($c,$q1);
+		$q1="delete from ".$_SESSION['tableName']." where ".$_SESSION['fieldName'][0]."='".$proKey."'";
+        $res=mysqli_query($c,$q1);
 		if($res)
 		{
 			echo "<script>alert('Deleted')</script>";
@@ -90,52 +118,83 @@ if(isset($_POST['btnDelete'])){
 }
 if(isset($_POST['submit']))
 {
+    if($_SESSION['updateFlag']==true){
+        $_SESSION['updateFlag'] = false;
 
-    /////////////logic to create insert query/////////////////////////////
-    $conn=mysqli_connect("localhost","root","","db_au_mis");
-    $result = mysqli_query($conn,"desc ".$_SESSION["tableName"]);
-    var_dump($result);
-    $filedNameString ="";
-    $fieldValueString = "";
-    $myQyery = "insert into ".$_SESSION["tableName"]."(";
-    
-    while($row=mysqli_fetch_array($result)){
-        // echo "<br>".$row['Field']." ".$row['Type']."<br>";
-        $filedNameString .= $row['Field'].",";
-        $fieldDataType = explode("(",$row['Type'])[0];
+        $c=mysqli_connect("localhost","root","","db_au_mis");
+        if($c){
+            $q1="update ".$_SESSION['tableName']." set ";
+            
+            
+            for($i=1;$i<$_SESSION['tabColCount'];$i++){
+
+                $q1 .= $_SESSION['fieldName'][$i]."='".$_POST[$_SESSION['fieldName'][$i]]."',";
+
+            }
+            $q1 = mb_substr($q1, 0, -1);
+            $q1 .= ' where '.$_SESSION['fieldName'][0]."='".$_SESSION["key"]."'";
+
+            echo '<br>updateQ: '.$q1;
+            $res=mysqli_query($c,$q1);
+            if($res)
+            {
+                echo "<script>alert('Updated')</script>";
+            }
+            else{
+                echo "<script>alert('Problem while Updating try again later')</script>";
+            }
+        }
+
+
+    }else{
+        /////////////logic to create insert query/////////////////////////////
+        $conn=mysqli_connect("localhost","root","","db_au_mis");
+        $result = mysqli_query($conn,"desc ".$_SESSION["tableName"]);
+        var_dump($result);
+        $filedNameString ="";
+        $fieldValueString = "";
+        $myQyery = "insert into ".$_SESSION["tableName"]."(";
         
-        // switch($fieldDataType){
-        //     case "varchar":
-        //         $fieldValueString .= "'".$_POST[$row['Field']]."',";        
-        //         break;
-        //     case "date":
-        //         $tempDate = date('Y-m-d',strtotime($_POST[$row['Field']]));
-        //         $fieldValueString .= "'".$tempDate."',";
-        //         break;
-        //     case "int":
-        //         echo "<br>came into int wala<br>";
-        //         $fieldValueString .= "".$_POST[$row['Field']].",";
-        //         break;
-        // }
-        $fieldValueString .= "'".$_POST[$row['Field']]."',";
+        while($row=mysqli_fetch_array($result)){
+            // echo "<br>".$row['Field']." ".$row['Type']."<br>";
+            $filedNameString .= $row['Field'].",";
+            $fieldDataType = explode("(",$row['Type'])[0];
+            
+            // switch($fieldDataType){
+            //     case "varchar":
+            //         $fieldValueString .= "'".$_POST[$row['Field']]."',";        
+            //         break;
+            //     case "date":
+            //         $tempDate = date('Y-m-d',strtotime($_POST[$row['Field']]));
+            //         $fieldValueString .= "'".$tempDate."',";
+            //         break;
+            //     case "int":
+            //         echo "<br>came into int wala<br>";
+            //         $fieldValueString .= "".$_POST[$row['Field']].",";
+            //         break;
+            // }
+            $fieldValueString .= "'".$_POST[$row['Field']]."',";
+        }
+        $columnNameQuery =  $myQyery.mb_substr($filedNameString, 0, -1).")";
+        $firingQuery = $columnNameQuery." values(".mb_substr($fieldValueString, 0, -1).");";
+        echo "<br>".$firingQuery."<br>";
+        /////////////logic to create insert query - final query will be in variable $firingQuery/////////////////////////////
+        
+        //////////////////////////////////////////////////////Insertion of custom query///////////////
+        $conn=mysqli_connect("localhost","root","","db_au_mis");
+        if($conn){
+            $res=mysqli_query($conn,$firingQuery);
+            if($res)
+            {
+                echo "inserted";
+            }
+            else{
+                echo "Faild";
+            }
+        }
     }
-    $columnNameQuery =  $myQyery.mb_substr($filedNameString, 0, -1).")";
-    $firingQuery = $columnNameQuery." values(".mb_substr($fieldValueString, 0, -1).");";
-    echo "<br>".$firingQuery."<br>";
-    /////////////logic to create insert query - final query will be in variable $firingQuery/////////////////////////////
+
     
-    //////////////////////////////////////////////////////Insertion of custom query///////////////
-    $conn=mysqli_connect("localhost","root","","db_au_mis");
-    if($conn){
-        $res=mysqli_query($conn,$firingQuery);
-		if($res)
-		{
-			echo "inserted";
-		}
-		else{
-			echo "Faild";
-		}
-    }
     //////////////////////////////////////////////////////Insertion of custom query///////////////
 
     // if($conn)
@@ -567,28 +626,28 @@ if(isset($_POST['submit']))
                                     case "varchar":
                                         ?>
                                         
-                                        <input type="text" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['activity_name'] ?>" <?php } ?> />
+                                        <input type="text" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($_SESSION['updateFlag']){ ?> value= "<?php echo $_SESSION["updateRow"][$i] ?>" <?php } ?> />
                                         
                                         <?php
                                         break;
                                     case "date":
                                         ?>
                                         
-                                        <input type="date" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['to_date'] ?>" <?php } ?> />
+                                        <input type="date" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($_SESSION['updateFlag']){ ?> value= "<?php echo $_SESSION["updateRow"][$i] ?>" <?php } ?> />
                                         
                                         <?php
                                         break;
                                     case "int":
                                         ?>
                                         
-                                        <input type="number" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['no_of_participant'] ?>" <?php } ?> />
+                                        <input type="number" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($_SESSION['updateFlag']){ ?> value= "<?php echo $_SESSION["updateRow"][$i] ?>" <?php } ?> />
                                         
                                         <?php
                                         break;
                                     case "tinyint":
                                         ?>
                                         
-                                        <input type="checkbox" class="form-control largerCheckbox" name="<?php echo $_SESSION["fieldName"][$i] ?>" value="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['no_of_participant'] ?>" <?php } ?> />
+                                        <input type="checkbox" class="form-control largerCheckbox" name="<?php echo $_SESSION["fieldName"][$i] ?>" value="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($_SESSION['updateFlag']){ ?> value= "<?php echo $_SESSION["updateRow"][$i] ?>" <?php } ?> />
                                         
                                         <?php
                                         break;    
@@ -607,7 +666,7 @@ if(isset($_POST['submit']))
                                     default:
                                     ?>
                                         
-                                    <input type="text" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['activity_name'] ?>" <?php } ?> />
+                                    <input type="text" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($_SESSION['updateFlag']){ ?> value= "<?php echo $_SESSION["updateRow"][$i] ?>" <?php } ?> />
                                     
                                 <?php
                                 }
@@ -623,28 +682,28 @@ if(isset($_POST['submit']))
                                     case "varchar":
                                         ?>
                                         
-                                        <input type="text" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['activity_name'] ?>" <?php } ?> />
+                                        <input type="text" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($_SESSION['updateFlag']){ ?> value= "<?php echo $_SESSION["updateRow"][$i] ?>" <?php } ?> />
                                         
                                         <?php
                                         break;
                                     case "date":
                                         ?>
                                         
-                                        <input type="date" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['to_date'] ?>" <?php } ?> />
+                                        <input type="date" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($_SESSION['updateFlag']){ ?> value= "<?php echo $_SESSION["updateRow"][$i] ?>" <?php } ?> />
                                         
                                         <?php
                                         break;
                                     case "int":
                                         ?>
                                         
-                                        <input type="number" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['no_of_participant'] ?>" <?php } ?> />
+                                        <input type="number" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($_SESSION['updateFlag']){ ?> value= "<?php echo $_SESSION["updateRow"][$i] ?>" <?php } ?> />
                                         
                                         <?php
                                         break;
                                     case "tinyint":
                                         ?>
                                         
-                                        <input type="checkbox" class="form-control largerCheckbox" name="<?php echo $_SESSION["fieldName"][$i] ?>" value="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['no_of_participant'] ?>" <?php } ?> />
+                                        <input type="checkbox" class="form-control largerCheckbox" name="<?php echo $_SESSION["fieldName"][$i] ?>" value="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($_SESSION['updateFlag']){ ?> value= "<?php echo $_SESSION["updateRow"][$i] ?>" <?php } ?> />
                                         
                                         <?php
                                         break;    
@@ -663,7 +722,7 @@ if(isset($_POST['submit']))
                                     default:
                                     ?>
                                         
-                                    <input type="text" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['activity_name'] ?>" <?php } ?> />
+                                    <input type="text" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($_SESSION['updateFlag']){ ?> value= "<?php echo $_SESSION["updateRow"][$i] ?>" <?php } ?> />
                                     
                                 <?php
                                 }
@@ -688,28 +747,28 @@ if(isset($_POST['submit']))
                                     case "varchar":
                                         ?>
                                         
-                                        <input type="text" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['activity_name'] ?>" <?php } ?> />
+                                        <input type="text" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($_SESSION['updateFlag']){ ?> value= "<?php echo $_SESSION["updateRow"][$i] ?>" <?php } ?> />
                                         
                                         <?php
                                         break;
                                     case "date":
                                         ?>
                                         
-                                        <input type="date" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['to_date'] ?>" <?php } ?> />
+                                        <input type="date" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($_SESSION['updateFlag']){ ?> value= "<?php echo $_SESSION["updateRow"][$i] ?>" <?php } ?> />
                                         
                                         <?php
                                         break;
                                     case "int":
                                         ?>
                                         
-                                        <input type="number" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['no_of_participant'] ?>" <?php } ?> />
+                                        <input type="number" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($_SESSION['updateFlag']){ ?> value= "<?php echo $_SESSION["updateRow"][$i] ?>" <?php } ?> />
                                         
                                         <?php
                                         break;
                                     case "tinyint":
                                         ?>
                                         
-                                        <input type="checkbox" class="form-control largerCheckbox" name="<?php echo $_SESSION["fieldName"][$i] ?>" value="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['no_of_participant'] ?>" <?php } ?> />
+                                        <input type="checkbox" class="form-control largerCheckbox" name="<?php echo $_SESSION["fieldName"][$i] ?>" value="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($_SESSION['updateFlag']){ ?> value= "<?php echo $_SESSION["updateRow"][$i] ?>" <?php } ?> />
                                         
                                         <?php
                                         break;    
@@ -728,7 +787,7 @@ if(isset($_POST['submit']))
                                     default:
                                     ?>
                                         
-                                    <input type="text" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($updateFlag){ ?> value= "<?php $row['activity_name'] ?>" <?php } ?> />
+                                    <input type="text" class="form-control" name="<?php echo $_SESSION["fieldName"][$i] ?>" placeholder="<?php echo $_SESSION["fieldName"][$i] ?>"  <?php if($_SESSION['updateFlag']){ ?> value= "<?php echo $_SESSION["updateRow"][$i] ?>" <?php } ?> />
                                     
                                 <?php
                                 }
@@ -827,52 +886,61 @@ if(isset($_POST['submit']))
 
                     	$conn=mysqli_connect("localhost","root","","db_au_mis");
 						if($conn){
-							$query="select * from ".$_SESSION["tableName"];
-							$execute=mysqli_query($conn,$query);
-                            
-                            
-							if(mysqli_num_rows($execute) > 0){
 
+                            // $conn=mysqli_connect("localhost","root","","db_au_mis");
+                            // $result = mysqli_query($conn,"desc ".$_SESSION["tableName"]);
+
+                        ?>
+                        <table border=2 class=table table-bordered table-striped >
+                            <thead>
+                                <tr>
+
+                                <?php
+                                for($i=0;$i<$_SESSION['tabColCount'];$i++){
+                                ?>    
+
+                                    <th class="text-center"><?php echo $_SESSION['fieldName'][$i] ?></th>
+                                <?php
+                                }
+                                ?>
+                                    <th class="text-center"> Update </th>
+                                    <th class="text-center"> Delete </th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                        
+                        <?php    
+
+                            $query="select * from ".$_SESSION["tableName"];
+                            echo $query;
+							$result=mysqli_query($conn,$query);
+                            while($row=mysqli_fetch_array($result)){
+                        ?>
+                                <form acton=" <?php echo $_SERVER['PHP_SELF'] ?>" method=post>
+                                    <tr>
+                                        <input type="hidden" name="key" value='<?php echo $row[0] ?>'>
+                                        <?php
+                                        for($i=0;$i<$_SESSION['tabColCount'];$i++){
+                                        ?>
+                                            <td> <?php echo $row[$i] ?> </td>
+                                        
+                                        <?php
+                                        }
+                                        ?>
+                                        <td><input type="submit" name="btnUpdate" value="Update"/></td>
+                                        <td><input type="submit" name="btnDelete" value="Delete"/></td>
+                                    </tr>
+                                </form>
                                 
-								echo "<table border=2 class=table table-bordered table-striped >";
-								echo '<thead>
-										<tr>
-											<th class="text-center">Activity name</th>
-											<th class="text-center">With Agency</th>
-											<th class="text-center">From Date</th>
-											<th class="text-center">To Date</th>
-											<th class="text-center">No Of Participant</th>
-											<th class="text-center">Current Year</th>
-											<th class="text-center">Doc Url</th>
-											<th class="text-center">Delete Program</th>
-											<th class="text-center">Update Program</th>
-									  </tr>
-								  	 </thead>
-								  	 <tbody>
-									  ';
-								while($row=mysqli_fetch_array($execute)){
-									echo '
-										<form acton='.$_SERVER['PHP_SELF'].' method=post>
-										  <tr>
-											<input type="hidden" name="program_key" value='.$row['activity_name'].'>
-											<td>'.$row['activity_name'].'</td>
-											<td>'.$row['with_agency'].'</td>
-											<td>'.$row['from_date'].'</td>
-											<td>'.$row['to_date'].'</td>
-											<td>'.$row['no_of_participant'].'</td>
-											<td>'.$row['current_year'].'</td>
-											<td>'.$row['doc_url'].'</td>
-											<td><input type="submit" name="btnDelete" value="Delete"/></td>
-											<td><input type="submit" name="btnUpdate" value="Update"/></td>
-										  </tr>
-										</form>
-										  ';
-								}
-								echo "</tbody>
-									  </table>";	
-								
+                            <?php    
+                            }
+                            ?>
+
+                            </tbody>
+                        </table>
+                        <?php								
 						}
-					}?>
+                        ?>
                 </div>
                 <!--// Forms-3 -->
                 <!-- Forms-4 -->
@@ -884,9 +952,13 @@ if(isset($_POST['submit']))
 
             <!-- Copyright -->
             <div class="copyright-w3layouts py-xl-3 py-2 mt-xl-5 mt-4 text-center">
-                <p>© 2018 Modernize . All Rights Reserved | Design by
-                    <a href="http://w3layouts.com/"> W3layouts </a>
+            <p>© 2019 | All Rights Reserved | Design by 
+                    <a href=#> Mayur Prajapati </a>
                 </p>
+                
+                <!--<p>© 2018 Modernize . All Rights Reserved | Design by
+                    <a href="http://w3layouts.com/"> W3layouts </a>
+                </p>-->
             </div>
             <!--// Copyright -->
         </div>
