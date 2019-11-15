@@ -22,7 +22,7 @@ if($_SERVER['REQUEST_METHOD'] != 'POST')
    
 }
 
-function getPrimaryKeys($tablename)
+function getPrimaryKeys($tableName)
 {
     $_SESSION["keyList"]= [];
     $conn=mysqli_connect("localhost","root","","db_au_mis");
@@ -76,6 +76,7 @@ if(isset($_POST['btnUpdate'])){
 
     //to get primary key list
     getPrimaryKeys($_SESSION['tableName']);
+    
     $proKey=$_POST['key'];
     $_SESSION["key"]=$_POST['key'];
     $c=mysqli_connect("localhost","root","","db_au_mis");
